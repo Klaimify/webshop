@@ -14,6 +14,10 @@ from webshop.webshop.doctype.webshop_settings.webshop_settings import (
     get_shopping_cart_settings,
 )
 from webshop.webshop.utils.product import get_web_item_qty_in_stock
+from webshop.webshop.utils.company_select import (
+    get_user_company,
+    get_company_webshop_config,
+)
 from erpnext.selling.doctype.quotation.quotation import _make_sales_order
 
 
@@ -31,6 +35,28 @@ def set_cart_count(quotation=None):
 			frappe.local.cookie_manager.set_cookie("cart_count", cart_count)
 
 
+def _apply_company_config(quotation):
+	company = get_user_company()
+	config  = get_company_webshop_config(company)
+
+	quotation.company            = config.get("company")
+	quotation.selling_price_list = config.get("price_list")
+
+	if config.get("quotation_series"):
+		quotation.naming_series = config.get("quotation_series")
+
+	if config.get("default_customer_group"):
+		quotation.customer_group = config.get("default_customer_group")
+
+	# Clear old taxes that belong to the previous company
+	quotation.set("taxes", [])
+	
+	# Recalculate taxes and totals with the new company context
+	apply_cart_settings(quotation=quotation)
+
+	return config
+
+
 @frappe.whitelist()
 def get_cart_quotation(doc=None):
 	party = get_party()
@@ -39,11 +65,18 @@ def get_cart_quotation(doc=None):
 		quotation = _get_cart_quotation(party)
 		doc = quotation
 		set_cart_count(quotation)
-
 	addresses = get_address_docs(party=party)
 
 	if not doc.customer_address and addresses:
 		update_cart_address("billing", addresses[0].name)
+
+	# Apply company config and save
+	if doc and doc.get("items"):
+		_apply_company_config(doc)
+		doc.payment_schedule = []
+		doc.run_method("calculate_taxes_and_totals")
+		doc.flags.ignore_permissions = True
+		doc.save()
 
 	return {
 		"doc": decorate_quotation_doc(doc),
@@ -88,15 +121,18 @@ def get_billing_addresses(party=None):
 
 @frappe.whitelist()
 def place_order():
+	# Step 1: Get quotation using our patched _get_cart_quotation
 	quotation = _get_cart_quotation()
-	cart_settings = frappe.get_cached_doc("Webshop Settings")
-	quotation.company = cart_settings.company
 
+	company = get_user_company()
+	config = get_company_webshop_config(company)
+
+	# Step 3: Stamp correct company — NOT cart_settings.company
+	quotation.company = config.get("company")
 	quotation.flags.ignore_permissions = True
 	quotation.submit()
 
 	if quotation.quotation_to == "Lead" and quotation.party_name:
-		# company used to create customer accounts
 		frappe.defaults.set_user_default("company", quotation.company)
 
 	if not (quotation.shipping_address_name or quotation.customer_address):
@@ -109,7 +145,7 @@ def place_order():
 	)
 	sales_order.payment_schedule = []
 
-	if not cint(cart_settings.allow_items_not_in_stock):
+	if not cint(config.get("allow_items_not_in_stock")):
 		for item in sales_order.get("items"):
 			item.warehouse = frappe.db.get_value(
 				"Website Item", {"item_code": item.item_code}, "website_warehouse"
@@ -121,9 +157,9 @@ def place_order():
 					item.item_code, "website_warehouse"
 				)
 				if not cint(item_stock.in_stock):
-					throw(_("{0} Not in Stock").format(item.item_code))
+					frappe.throw(_("{0} Not in Stock").format(item.item_code))
 				if item.qty > item_stock.stock_qty:
-					throw(
+					frappe.throw(
 						_("Only {0} in Stock for item {1}").format(
 							item_stock.stock_qty, item.item_code
 						)
@@ -199,6 +235,25 @@ def update_cart(item_code, qty, additional_notes=None, with_items=False):
 
 	set_cart_count(quotation)
 
+	# If cart was emptied, return early with appropriate response
+	if quotation is None:
+		if cint(with_items):
+			return {
+				"items": "",
+				"total": "",
+				"taxes_and_totals": "",
+			}
+		return {"name": None}
+
+	# Apply company config to the saved quotation
+	if quotation and quotation.get("items"):
+		_apply_company_config(quotation)
+		quotation.payment_schedule = []
+		quotation.run_method("calculate_taxes_and_totals")
+		quotation.flags.ignore_permissions = True
+		quotation.save()
+
+	# If caller wants rendered HTML back, render it now with the corrected quotation
 	if cint(with_items):
 		context = get_cart_quotation(quotation)
 		return {

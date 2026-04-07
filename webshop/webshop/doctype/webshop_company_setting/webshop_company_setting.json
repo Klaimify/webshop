@@ -1,0 +1,97 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-04-06 06:08:14.221065",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "price_list",
+  "payment_gateway_account",
+  "payment_success_url",
+  "quotation_series",
+  "default_customer_group",
+  "enable_checkout",
+  "show_price"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "price_list",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Price List",
+   "options": "Price List",
+   "reqd": 1
+  },
+  {
+   "fieldname": "payment_gateway_account",
+   "fieldtype": "Link",
+   "label": "Payment Gateway Account",
+   "options": "Payment Gateway Account"
+  },
+  {
+   "default": "Orders",
+   "fieldname": "payment_success_url",
+   "fieldtype": "Data",
+   "label": "Payment Success URL"
+  },
+  {
+   "fieldname": "quotation_series",
+   "fieldtype": "Data",
+   "label": "Quotation Series"
+  },
+  {
+   "fieldname": "default_customer_group",
+   "fieldtype": "Link",
+   "label": "Default Customer Group",
+   "options": "Customer Group"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_checkout",
+   "fieldtype": "Check",
+   "label": "Enable Checkout"
+  },
+  {
+   "default": "1",
+   "fieldname": "show_price",
+   "fieldtype": "Check",
+   "label": "Show Price"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-04-06 07:13:38.600105",
+ "modified_by": "Administrator",
+ "module": "Webshop",
+ "name": "Webshop Company Setting",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
