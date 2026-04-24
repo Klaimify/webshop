@@ -52,7 +52,7 @@ def _apply_company_config(quotation):
 	quotation.set("taxes", [])
 	
 	# Recalculate taxes and totals with the new company context
-	apply_cart_settings(quotation=quotation)
+	# apply_cart_settings(quotation=quotation)
 
 	return config
 
@@ -223,7 +223,7 @@ def update_cart(item_code, qty, additional_notes=None, with_items=False):
 			quotation_items[0].warehouse = warehouse
 			quotation_items[0].additional_notes = additional_notes
 
-	apply_cart_settings(quotation=quotation)
+	# apply_cart_settings(quotation=quotation)
 
 	quotation.flags.ignore_permissions = True
 	quotation.payment_schedule = []
@@ -438,11 +438,12 @@ def _get_cart_quotation(party=None):
 		order_by="modified desc",
 		limit_page_length=1,
 	)
-
+	
 	if quotation:
 		qdoc = frappe.get_doc("Quotation", quotation[0].name)
 	else:
-		company = frappe.db.get_single_value("Webshop Settings", "company")
+		# company = frappe.db.get_single_value("Webshop Settings", "company")
+		company = get_user_company()
 		qdoc = frappe.get_doc(
 			{
 				"doctype": "Quotation",
@@ -465,7 +466,7 @@ def _get_cart_quotation(party=None):
 
 		qdoc.flags.ignore_permissions = True
 		qdoc.run_method("set_missing_values")
-		apply_cart_settings(party, qdoc)
+		# apply_cart_settings(party, qdoc)
 
 	return qdoc
 
@@ -603,11 +604,13 @@ def get_party(user=None):
 			party = contact.links[0].link_name
 
 	cart_settings = frappe.get_cached_doc("Webshop Settings")
+	config= get_company_webshop_config()
 
 	debtors_account = ""
 
 	if cart_settings.enable_checkout:
-		debtors_account = get_debtors_account(cart_settings)
+		# debtors_account = get_debtors_account(cart_settings)
+		debtors_account = get_debtors_account(config)
 
 	if party:
 		doc = frappe.get_doc(party_doctype, party)
@@ -641,7 +644,7 @@ def get_party(user=None):
 			customer.update(
 				{
 					"accounts": [
-						{"company": cart_settings.company, "account": debtors_account}
+						{"company": config.get("company"), "account": debtors_account}
 					]
 				}
 			)
@@ -667,12 +670,14 @@ def get_party(user=None):
 			return frappe.get_doc("Customer", customer)
 
 
-def get_debtors_account(cart_settings):
-	if not cart_settings.payment_gateway_account:
-		frappe.throw(_("Payment Gateway Account not set"), _("Mandatory"))
+def get_debtors_account(config):
+	# if not cart_settings.payment_gateway_account:
+	# 	frappe.throw(_("Payment Gateway Account not set"), _("Mandatory"))
+	if not config.get("payment_gateway_account"):
+		return frappe.throw(_("Payment Gateway Account not set"), _("Mandatory"))
 
 	payment_gateway_account_currency = frappe.get_doc(
-		"Payment Gateway Account", cart_settings.payment_gateway_account
+		"Payment Gateway Account", config.payment_gateway_account
 	).currency
 
 	account_name = _("Debtors ({0})").format(payment_gateway_account_currency)
@@ -682,7 +687,7 @@ def get_debtors_account(cart_settings):
 		"Asset",
 		is_group=0,
 		account_currency=payment_gateway_account_currency,
-		company=cart_settings.company,
+		company=config.get("company"),
 	)
 
 	if not debtors_account_name:
@@ -693,7 +698,7 @@ def get_debtors_account(cart_settings):
 				"root_type": "Asset",
 				"is_group": 0,
 				"parent_account": get_account_name(
-					root_type="Asset", is_group=1, company=cart_settings.company
+					root_type="Asset", is_group=1, company=config.get("company")
 				),
 				"account_name": account_name,
 				"currency": payment_gateway_account_currency,
@@ -781,6 +786,7 @@ def get_shipping_rules(quotation=None, cart_settings=None):
 		quotation = _get_cart_quotation()
 
 	shipping_rules = []
+	company = get_user_company()
 	if quotation.shipping_address_name:
 		country = frappe.db.get_value(
 			"Address", quotation.shipping_address_name, "country"
@@ -794,7 +800,7 @@ def get_shipping_rules(quotation=None, cart_settings=None):
 				.on(sr.name == sr_country.parent)
 				.select(sr.name)
 				.distinct()
-				.where((sr_country.country == country) & (sr.disabled != 1) & (sr.shipping_rule_type == "Selling"))
+				.where((sr_country.country == country) & (sr.disabled != 1) & (sr.shipping_rule_type == "Selling") & (sr.company == company))
 			)
 			result = query.run(as_list=True)
 			shipping_rules = [x[0] for x in result]
