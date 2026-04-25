@@ -444,6 +444,15 @@ def _get_cart_quotation(party=None):
 	else:
 		# company = frappe.db.get_single_value("Webshop Settings", "company")
 		company = get_user_company()
+		company_address = frappe.db.get_value(
+        "Dynamic Link",
+        {
+            "link_doctype": "Company",
+            "link_name": company,
+            "parenttype": "Address",
+        },
+        "parent"
+    )
 		qdoc = frappe.get_doc(
 			{
 				"doctype": "Quotation",
@@ -458,13 +467,15 @@ def _get_cart_quotation(party=None):
 				"party_name": party.name,
 			}
 		)
+		if company_address:
+			qdoc.company_address = company_address
 
 		qdoc.contact_person = frappe.db.get_value(
 			"Contact", {"email_id": frappe.session.user}
 		)
 		qdoc.contact_email = frappe.session.user
 
-		qdoc.flags.ignore_permissions = True
+		qdoc.flags.ignore_permissions = True 
 		qdoc.run_method("set_missing_values")
 		# apply_cart_settings(party, qdoc)
 
