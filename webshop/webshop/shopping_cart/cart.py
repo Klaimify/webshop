@@ -35,7 +35,7 @@ def set_cart_count(quotation=None):
 			frappe.local.cookie_manager.set_cookie("cart_count", cart_count)
 
 
-def _apply_company_config(quotation):
+def _apply_company_config(party=None, quotation=None):
 	company = get_user_company()
 	config  = get_company_webshop_config(company)
 
@@ -45,12 +45,14 @@ def _apply_company_config(quotation):
 	if config.get("quotation_series"):
 		quotation.naming_series = config.get("quotation_series")
 
-	if config.get("default_customer_group"):
-		quotation.customer_group = config.get("default_customer_group")
+	# if config.get("default_customer_group"):
+	# 	quotation.customer_group = config.get("default_customer_group")
 
 	# Clear old taxes that belong to the previous company
 	quotation.set("taxes", [])
-	
+	cart_settings=None
+	_apply_shipping_rule(party, quotation, cart_settings)
+	set_taxes(quotation, cart_settings)
 	# Recalculate taxes and totals with the new company context
 	# apply_cart_settings(quotation=quotation)
 
@@ -72,7 +74,7 @@ def get_cart_quotation(doc=None):
 
 	# Apply company config and save
 	if doc and doc.get("items"):
-		_apply_company_config(doc)
+		_apply_company_config(party=None, quotation=doc)
 		doc.payment_schedule = []
 		doc.run_method("calculate_taxes_and_totals")
 		doc.flags.ignore_permissions = True
@@ -247,7 +249,7 @@ def update_cart(item_code, qty, additional_notes=None, with_items=False):
 
 	# Apply company config to the saved quotation
 	if quotation and quotation.get("items"):
-		_apply_company_config(quotation)
+		_apply_company_config(party=None, quotation=quotation)
 		quotation.payment_schedule = []
 		quotation.run_method("calculate_taxes_and_totals")
 		quotation.flags.ignore_permissions = True
@@ -477,6 +479,7 @@ def _get_cart_quotation(party=None):
 
 		qdoc.flags.ignore_permissions = True 
 		qdoc.run_method("set_missing_values")
+		_apply_company_config(party, qdoc)
 		# apply_cart_settings(party, qdoc)
 
 	return qdoc
