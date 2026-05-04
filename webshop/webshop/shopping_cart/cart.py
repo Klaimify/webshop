@@ -427,6 +427,7 @@ def _get_cart_quotation(party=None):
 	"""Return the open Quotation of type "Shopping Cart" or make a new one"""
 	if not party:
 		party = get_party()
+	frappe.log_error("after party : ", party)
 
 	quotation = frappe.get_all(
 		"Quotation",
@@ -440,12 +441,16 @@ def _get_cart_quotation(party=None):
 		order_by="modified desc",
 		limit_page_length=1,
 	)
+	frappe.log_error("quotation after : ", quotation)
+
 	
 	if quotation:
 		qdoc = frappe.get_doc("Quotation", quotation[0].name)
+		frappe.log_error("quotation if  : ", qdoc)
 	else:
 		# company = frappe.db.get_single_value("Webshop Settings", "company")
 		company = get_user_company()
+		frappe.log_error("company get user company : ", company)
 		company_address = frappe.db.get_value(
         "Dynamic Link",
         {
@@ -455,6 +460,7 @@ def _get_cart_quotation(party=None):
         },
         "parent"
     )
+		frappe.log_error("company address: ", company_address)
 		qdoc = frappe.get_doc(
 			{
 				"doctype": "Quotation",
@@ -469,8 +475,10 @@ def _get_cart_quotation(party=None):
 				"party_name": party.name,
 			}
 		)
+		frappe.log_error("qdoc::", qdoc)
 		if company_address:
 			qdoc.company_address = company_address
+			frappe.log_error("company address set in qdoc: ", qdoc.company_address)
 
 		qdoc.contact_person = frappe.db.get_value(
 			"Contact", {"email_id": frappe.session.user}
@@ -481,6 +489,7 @@ def _get_cart_quotation(party=None):
 		qdoc.run_method("set_missing_values")
 		_apply_company_config(party, qdoc)
 		# apply_cart_settings(party, qdoc)
+		frappe.log_error("before insert qdoc: ", qdoc)
 
 	return qdoc
 
