@@ -89,36 +89,91 @@ def get_cart_quotation(doc=None):
 	}
 
 
+# @frappe.whitelist()
+# def get_shipping_addresses(party=None):
+# 	if not party:
+# 		party = get_party()
+# 	addresses = get_address_docs(party=party)
+# 	return [
+# 		{
+# 			"name": address.name,
+# 			"title": address.address_title,
+# 			"display": address.display,
+# 		}
+# 		for address in addresses
+# 		if address.address_type == "Shipping"
+# 	]
+
 @frappe.whitelist()
 def get_shipping_addresses(party=None):
-	if not party:
-		party = get_party()
-	addresses = get_address_docs(party=party)
-	return [
-		{
-			"name": address.name,
-			"title": address.address_title,
-			"display": address.display,
-		}
-		for address in addresses
-		if address.address_type == "Shipping"
-	]
+    if not party:
+        party = get_party()
 
+    addresses = get_address_docs(party=party)
+
+    return [
+        {
+            "name": address.name,
+            "address_title": address.address_title,
+            "address_type": address.address_type,
+            "email_id": address.email_id,
+            "phone": address.phone,
+            "address_line1": address.address_line1,
+            "address_line2": address.address_line2,
+            "city": address.city,
+            "state": address.state,
+            "country": address.country,
+            "postal_code": address.pincode,
+            "preferred_billing": address.is_primary_address,
+            "preferred_shipping": address.is_shipping_address,
+            "display": address.display,  # optional (for UI only)
+        }
+        for address in addresses
+        if address.address_type == "Shipping"
+    ]
+
+# @frappe.whitelist()
+# def get_billing_addresses(party=None):
+# 	if not party:
+# 		party = get_party()
+# 	addresses = get_address_docs(party=party)
+# 	return [
+# 		{
+# 			"name": address.name,
+# 			"title": address.address_title,
+# 			"display": address.display,
+# 		}
+# 		for address in addresses
+# 		if address.address_type == "Billing"
+# 	]
 
 @frappe.whitelist()
 def get_billing_addresses(party=None):
-	if not party:
-		party = get_party()
-	addresses = get_address_docs(party=party)
-	return [
-		{
-			"name": address.name,
-			"title": address.address_title,
-			"display": address.display,
-		}
-		for address in addresses
-		if address.address_type == "Billing"
-	]
+    if not party:
+        party = get_party()
+
+    addresses = get_address_docs(party=party)
+
+    return [
+        {
+            "name": address.name,
+            "address_title": address.address_title,
+            "address_type": address.address_type,
+            "email_id": address.email_id,
+            "phone": address.phone,
+            "address_line1": address.address_line1,
+            "address_line2": address.address_line2,
+            "city": address.city,
+            "state": address.state,
+            "country": address.country,
+            "postal_code": address.pincode,
+            "preferred_billing": address.is_primary_address,
+            "preferred_shipping": address.is_shipping_address,
+            "display": address.display,  # optional (for UI)
+        }
+        for address in addresses
+        if address.address_type == "Billing"
+    ]
 
 
 @frappe.whitelist()
