@@ -123,7 +123,7 @@ def get_shipping_addresses(party=None):
             "city": address.city,
             "state": address.state,
             "country": address.country,
-            "postal_code": address.pincode,
+            "pincode": address.pincode,
             "preferred_billing": address.is_primary_address,
             "preferred_shipping": address.is_shipping_address,
             "display": address.display,  # optional (for UI only)
@@ -166,7 +166,7 @@ def get_billing_addresses(party=None):
             "city": address.city,
             "state": address.state,
             "country": address.country,
-            "postal_code": address.pincode,
+            "pincode": address.pincode,
             "preferred_billing": address.is_primary_address,
             "preferred_shipping": address.is_shipping_address,
             "display": address.display,  # optional (for UI)
