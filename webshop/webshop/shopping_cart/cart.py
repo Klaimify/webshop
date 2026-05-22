@@ -79,9 +79,22 @@ def get_cart_quotation(doc=None):
 		doc.run_method("calculate_taxes_and_totals")
 		doc.flags.ignore_permissions = True
 		doc.save()
+	decorated_doc = decorate_quotation_doc(doc)
+	doc_dict = decorated_doc.as_dict()
 
+	for item in doc_dict.get("items", []):
+		warehouse = item.get("warehouse")
+
+		stock_data = get_stock_balance(
+			item.get("item_code"),
+			warehouse
+		)
+
+		item["reserved_stock"] = stock_data.get("reserved_stock", 0)
+		item["available_qty"] = stock_data.get("available_qty", 0)
+		item["in_stock"] = stock_data.get("in_stock", False)
 	return {
-		"doc": decorate_quotation_doc(doc),
+		"doc": doc_dict,
 		"shipping_addresses": get_shipping_addresses(party),
 		"billing_addresses": get_billing_addresses(party),
 		"shipping_rules": get_applicable_shipping_rules(party),
@@ -477,12 +490,30 @@ def decorate_quotation_doc(doc):
 
 	return doc
 
+def get_stock_balance(item_code, warehouse):
+    bin_data = frappe.db.get_value(
+        "Bin",
+        {"item_code": item_code, "warehouse": warehouse},
+        ["actual_qty", "reserved_stock"],
+        as_dict=True
+    )
+    if not bin_data:
+        return {"actual_qty": 0, "reserved_stock": 0,"available_qty":0, "in_stock":False}
+    actual_qty = bin_data.get("actual_qty", 0)
+    reserved_stock = bin_data.get("reserved_stock", 0)
+    available_qty = actual_qty - reserved_stock
+    return {
+        "actual_qty":actual_qty,
+        "reserved_stock":reserved_stock,
+        "available_qty":available_qty,
+        "in_stock": available_qty > 0 
+    }
+
 
 def _get_cart_quotation(party=None):
 	"""Return the open Quotation of type "Shopping Cart" or make a new one"""
 	if not party:
 		party = get_party()
-	frappe.log_error("after party : ", party)
 
 	quotation = frappe.get_all(
 		"Quotation",
@@ -496,16 +527,13 @@ def _get_cart_quotation(party=None):
 		order_by="modified desc",
 		limit_page_length=1,
 	)
-	frappe.log_error("quotation after : ", quotation)
-
 	
 	if quotation:
 		qdoc = frappe.get_doc("Quotation", quotation[0].name)
-		frappe.log_error("quotation if  : ", qdoc)
+
 	else:
 		# company = frappe.db.get_single_value("Webshop Settings", "company")
 		company = get_user_company()
-		frappe.log_error("company get user company : ", company)
 		company_address = frappe.db.get_value(
         "Dynamic Link",
         {
@@ -515,7 +543,6 @@ def _get_cart_quotation(party=None):
         },
         "parent"
     )
-		frappe.log_error("company address: ", company_address)
 		qdoc = frappe.get_doc(
 			{
 				"doctype": "Quotation",
@@ -530,10 +557,8 @@ def _get_cart_quotation(party=None):
 				"party_name": party.name,
 			}
 		)
-		frappe.log_error("qdoc::", qdoc)
 		if company_address:
 			qdoc.company_address = company_address
-			frappe.log_error("company address set in qdoc: ", qdoc.company_address)
 
 		qdoc.contact_person = frappe.db.get_value(
 			"Contact", {"email_id": frappe.session.user}
@@ -544,7 +569,6 @@ def _get_cart_quotation(party=None):
 		qdoc.run_method("set_missing_values")
 		_apply_company_config(party, qdoc)
 		# apply_cart_settings(party, qdoc)
-		frappe.log_error("before insert qdoc: ", qdoc)
 
 	return qdoc
 
