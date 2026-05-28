@@ -433,14 +433,20 @@ def update_cart_address(address_type, address_name):
 	context = get_cart_quotation(quotation)
 	context["address"] = address_doc
 
+	# return {
+	# 	"taxes": frappe.render_template(
+	# 		"templates/includes/order/order_taxes.html", context
+	# 	),
+	# 	"address": frappe.render_template(
+	# 		"templates/includes/cart/address_card.html", context
+	# 	),
+	# }
 	return {
-		"taxes": frappe.render_template(
-			"templates/includes/order/order_taxes.html", context
-		),
-		"address": frappe.render_template(
-			"templates/includes/cart/address_card.html", context
-		),
-	}
+	"success": True,
+	"message": "Cart updated successfully",
+	"quotation": quotation.as_dict(),
+	"address": address_doc,
+}
 
 
 def guess_territory():
