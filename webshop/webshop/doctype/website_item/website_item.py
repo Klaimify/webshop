@@ -517,6 +517,7 @@ def make_website_item(doc, save=True):
 
 	website_item = frappe.new_doc("Website Item")
 	website_item.web_item_name = doc.get("item_name")
+	website_item.custom_item_company = doc.get("custom_company")
 
 	fields_to_map = [
 		"item_code",
