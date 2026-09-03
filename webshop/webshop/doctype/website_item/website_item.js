@@ -33,5 +33,18 @@ frappe.ui.form.on('Website Item', {
 
 	set_meta_tags: (frm) => {
 		frappe.utils.set_meta_tag(frm.doc.route);
-	}
+	},
+    setup(frm) {
+        frm.set_query("website_warehouse", () => {
+            return {
+                filters: {
+                    company: frm.doc.custom_item_company
+                }
+            };
+        });
+    },
+
+    custom_item_company(frm) {
+        frm.set_value("website_warehouse", null);
+    }
 });
